@@ -1,6 +1,6 @@
 #include "rtoskernel.h"
 
-#define NUM_OF_THREADS			3U
+#define MAX_NUM_OF_THREADS		10U
 #define STACK_SIZE				400U
 #define SYS_CLOCK				64000000U //64Mhz
 #define CTRL_ENABLE				(1U<<0)
@@ -9,11 +9,10 @@
 #define CTRL_COUNTFLAG			(1U<<16)
 #define SYSTICK_RST				0U
 #define INTCTRL					(*(volatile uint32_t*)(0xE000ED04)) //Interrupt control and state register
-#define TIM2EN					(1U<<0)
-#define CR1_CEN					(1U<<0)
-#define DIER_UIE					(1U<<0)
+
 uint32_t Millsec_Clock_Cyc;
 uint32_t periodTick;
+uint32_t threadsCreated=0;
 struct threadControlBlock{
 	int32_t *ptrStack;
 	struct threadControlBlock *nextThread;
@@ -21,10 +20,10 @@ struct threadControlBlock{
 
 typedef struct threadControlBlock tcb;
 
-tcb tcbArr[NUM_OF_THREADS];
+tcb tcbArr[MAX_NUM_OF_THREADS];
 tcb *ptrCurrTCB;
 
-int32_t threadStack[NUM_OF_THREADS][STACK_SIZE];
+int32_t threadStack[MAX_NUM_OF_THREADS][STACK_SIZE];
 
 void rtosSchedulerLaunch();
 void rtosSchedulerSwitch();
@@ -53,7 +52,17 @@ void rtosKernelThreadStackInit(int idx){
 	threadStack[idx][STACK_SIZE-16] = 0xBBBBBBBB;//R4
 }
 
-uint8_t rtosKernelAddThread(void(*thread0)(void), void(*thread1)(void), void(*thread2)(void)){
+void initThreadNext(){
+	for(uint32_t i = 0; i< threadsCreated; i++){
+		if(i==threadsCreated-1){
+			tcbArr[i].nextThread = &tcbArr[0];
+		} else {
+			tcbArr[i].nextThread = &tcbArr[i+1];
+		}
+	}
+}
+
+/*uint8_t rtosKernelAddThread(void(*thread0)(void), void(*thread1)(void), void(*thread2)(void)){
 	__disable_irq(); //Disabling global interrupts
 	tcbArr[0].nextThread = &tcbArr[1];
 	tcbArr[1].nextThread = &tcbArr[2];
@@ -72,10 +81,21 @@ uint8_t rtosKernelAddThread(void(*thread0)(void), void(*thread1)(void), void(*th
 
 	__enable_irq();
 	return 1;
+}*/
+uint8_t rtosKernelAddThread(void(*threadFunc)(void), uint32_t threadID){
+	__disable_irq(); //Disabling global interrupts
+
+	rtosKernelThreadStackInit(threadID);
+	threadStack[threadID][STACK_SIZE-2] = (uint32_t)(threadFunc); //Setting the program counter to function pointer
+
+	threadsCreated++;
+	initThreadNext();
+	__enable_irq();
+	return 1;
 }
 
-void rtosKernelInit(){
-	Millsec_Clock_Cyc = (SYS_CLOCK/1000); //Note: 64000000 cycles/sec so 64000 cycles in one ms
+void rtosKernelClkInit(){
+	Millsec_Clock_Cyc = (SYS_CLOCK/1000); //Note: Bus speed 64000000 cycles/sec so 64000 cycles in one ms
 }
 
 void rtosKernelLaunch(uint32_t cycleQuanta){
@@ -100,6 +120,9 @@ void rtosKernelLaunch(uint32_t cycleQuanta){
 	//Enable Interrupt
 	SysTick->CTRL |= CTRL_TICKINT;
 
+	//Setting first thread 0 as first thread to run
+	ptrCurrTCB = &tcbArr[0];
+
 	//Launching Scheduler
 	rtosSchedulerLaunch();
 }
@@ -120,22 +143,12 @@ __attribute__((naked))void SysTick_Handler(){
 
 
 	//Fetching the next thread
-#if (PERIODIC_TASK == 0)
 	//Load R1 from a location 4 bytes above address R1, i.e. R1 = ptrCurrTCB->next
 	__asm("LDR R1,[R1, #4]");
 	//Store R1 at address equals R0, i.e ptrCurrTCB = R1
 	__asm("STR R1, [R0]");
 	//Load Cortex M SP from address equals R1, i.e. SP = ptrCurrTCB->ptrStack
 	__asm("LDR SP, [R1]");
-#elif (PERIODIC_TASK == 1)
-	__asm("PUSH {R0, LR}");
-	__asm("BL	rtosSchedulerSwitch");
-	__asm("POP {R0, LR}");
-	//like before fetch the value at the memory at R0 into R1 i.e. R1 = ptrCurrTCB
-	__asm("LDR R1, [R0]");
-	//Load CortexM SP from memory pointed by R1
-	__asm("LDR SP, [R1]");
-#endif
 	//Restore R4, R5, R6, R7, R8, R9, R10, R11
 	__asm("POP {R4-R11}");
 	//Enable global interrupt
@@ -174,32 +187,6 @@ void rtosThreadYield(){
 	SysTick->VAL = 0; //By writing any value to this register the value is overwritten
 	INTCTRL = (1U<<26);
 }
-#if PERIODIC_TASK == 1
-void rtosSchedulerSwitch(){
-	if( (++periodTick) == PERIODIC_TASK_PERIOD){
-		(*task3)();
-		periodTick=0;
-	}
-	ptrCurrTCB = ptrCurrTCB->nextThread;
-}
-#endif
-
-void tim2_1hz_interrupt_init(){
-	//Enable clock access to timer 2
-	RCC->APB1LENR |= TIM2EN;
-	//Set timer prescalar
-	TIM2->PSC = 6400-1; // Bus clock is 64000000 dividing by prescalar to get 10000 HZ
-	//Set auto reload value
-	TIM2->ARR = 10000-1; //1000/1000 = 1Hz
-	//Clear Counter
-	TIM2->CNT = 0;
-	//Enable timer 2
-	TIM2->CR1 = CR1_CEN;
-	//Enable interrupt
-	TIM2->DIER = DIER_UIE;
-	//Enable the timer interrupt in NVIC
-	NVIC_EnableIRQ(TIM2_IRQn);
-}
 
 void rtosSempahoreInit(int32_t *semaphoreCnt, int32_t initVal){
 	*semaphoreCnt = initVal;
@@ -216,6 +203,7 @@ void rtosSemaphoreCntTake(int32_t *semaphoreCnt){
 	while(*semaphoreCnt <= 0){
 		__disable_irq();
 		__enable_irq();
+		rtosThreadYield();
 	}
 	*semaphoreCnt = *semaphoreCnt - 1;
 	__enable_irq();

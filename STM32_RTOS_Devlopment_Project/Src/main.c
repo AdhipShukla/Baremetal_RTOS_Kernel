@@ -19,33 +19,12 @@
 #include <stdint.h>
 #include <led.h>
 #include <uart.h>
-//#include <timebase.h>
-#include "rtoskernel.h"
-#define ROUND_ROBIN_PERIOD		1 //MS
-#if !defined(__SOFT_FP__) && defined(__ARM_FP)
-  #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
-#endif
-uint32_t cntTask0, cntTask1, cntTask2, cntTask3, cntTask4;
-int32_t semaphore1, semaphore2;
-/*int main_cool(){
-	while(1){
-		printf("Cool On\n\r");
-		delay(4);
-		printf("Cool Off\n\r");
-		delay(4);
-	}
-	return 0;
-}
+#include <timebase.h>
+#include <rtoskernel.h>
+#define ROUND_ROBIN_PERIOD		10 //MS
 
-int main_hot(){
-	while(1){
-		printf("Hot On\n\r");
-		delay(4);
-		printf("Hot Off\n\r");
-		delay(4);
-	}
-	return 0;
-}*/
+uint32_t cntTask0, cntTask1, cntTask2;
+int32_t semaphore1, semaphore2;
 
 void park_mode(){
 	printf("Park Mode\n\r");
@@ -60,12 +39,6 @@ void drive_mode(){
 	printf("Drive Mode\n\r");
 }
 
-void task3(){
-	cntTask3++;
-	//drive_mode();
-	//rtosThreadYield();
-}
-
 void task0(){
 	while(1){
 		cntTask0++;
@@ -73,6 +46,7 @@ void task0(){
 		drive_mode();
 		rtosSemaphoreCntGive(&semaphore1);
 		//rtosThreadYield();
+		delay(7);
 	}
 }
 
@@ -91,6 +65,7 @@ void task2(){
 		park_mode();
 		rtosSemaphoreCntGive(&semaphore1);
 		//rtosThreadYield();
+		delay(3);
 	}
 }
 
@@ -98,11 +73,8 @@ int main(void)
 {
 	led_init();
 	uart_tx_init();
-	tim2_1hz_interrupt_init();
-//	timebase_init();
-//    /* Loop forever */
-//	main_hot();//Therad1
-//	main_cool();//Thread2
+	tim2_1MS_tick_init();
+
 //	for(;;){
 //		led_on();
 //		//for(int i =0; i<90000; i++){};
@@ -113,16 +85,16 @@ int main(void)
 //	}
 	rtosSempahoreInit(&semaphore1, 1);
 	rtosSempahoreInit(&semaphore2, 0);
-	rtosKernelInit();
-	rtosKernelAddThread(&task0, &task1, &task2);
+	rtosKernelClkInit();
+	rtosKernelAddThread(&task0, 0);
+	rtosKernelAddThread(&task1, 1);
+	rtosKernelAddThread(&task2, 2);
+	rtosKernelAddThread(&task2, 3);
+	rtosKernelAddThread(&task2, 4);
 	rtosKernelLaunch(ROUND_ROBIN_PERIOD);
 	while(1){
 
 	}
 }
 
-void TIM2_IRQHandler(){
-	//Clear the interrupt flag
-	TIM2->SR &= ~SR_UIF;
-	cntTask4++;
-}
+
