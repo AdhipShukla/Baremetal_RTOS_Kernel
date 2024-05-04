@@ -1,0 +1,14 @@
+D:/Courses/Embedded/STM32/H747I_Disco/Programs/003_RTOS_Devlopment_CM4/chip_headers/CMSIS/Include/core_cm4.h:1679:22:__NVIC_EnableIRQ	16	static,ignoring_inline_asm
+D:/Courses/Embedded/STM32/H747I_Disco/Programs/003_RTOS_Devlopment_CM4/chip_headers/CMSIS/Include/core_cm4.h:1809:22:__NVIC_SetPriority	16	static
+../Src/rtoskernel.c:32:6:rtosKernelThreadStackInit	16	static
+../Src/rtoskernel.c:56:9:rtosKernelAddThread	24	static,ignoring_inline_asm
+../Src/rtoskernel.c:77:6:rtosKernelInit	4	static
+../Src/rtoskernel.c:81:6:rtosKernelLaunch	16	static
+../Src/rtoskernel.c:107:28:SysTick_Handler	0	static,ignoring_inline_asm
+../Src/rtoskernel.c:147:6:rtosSchedulerLaunch	4	static,ignoring_inline_asm
+../Src/rtoskernel.c:173:6:rtosThreadYield	4	static
+../Src/rtoskernel.c:178:6:rtosSchedulerSwitch	8	static
+../Src/rtoskernel.c:187:6:tim2_1hz_interrupt_init	8	static
+../Src/rtoskernel.c:204:6:rtosSempahoreInit	16	static
+../Src/rtoskernel.c:208:6:rtosSemaphoreCntGive	16	static,ignoring_inline_asm
+../Src/rtoskernel.c:214:6:rtosSemaphoreCntTake	16	static,ignoring_inline_asm

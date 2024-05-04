@@ -1,0 +1,14 @@
+D:/Courses/Embedded/STM32/H747I_Disco/Programs/003_RTOS_Devlopment_CM4/chip_headers/CMSIS/Include/core_cm4.h:1679:22:__NVIC_EnableIRQ	2
+D:/Courses/Embedded/STM32/H747I_Disco/Programs/003_RTOS_Devlopment_CM4/chip_headers/CMSIS/Include/core_cm4.h:1809:22:__NVIC_SetPriority	2
+../Src/rtoskernel.c:32:6:rtosKernelThreadStackInit	1
+../Src/rtoskernel.c:56:9:rtosKernelAddThread	1
+../Src/rtoskernel.c:77:6:rtosKernelInit	1
+../Src/rtoskernel.c:81:6:rtosKernelLaunch	1
+../Src/rtoskernel.c:107:28:SysTick_Handler	1
+../Src/rtoskernel.c:147:6:rtosSchedulerLaunch	1
+../Src/rtoskernel.c:173:6:rtosThreadYield	1
+../Src/rtoskernel.c:178:6:rtosSchedulerSwitch	2
+../Src/rtoskernel.c:187:6:tim2_1hz_interrupt_init	1
+../Src/rtoskernel.c:204:6:rtosSempahoreInit	1
+../Src/rtoskernel.c:208:6:rtosSemaphoreCntGive	1
+../Src/rtoskernel.c:214:6:rtosSemaphoreCntTake	2
