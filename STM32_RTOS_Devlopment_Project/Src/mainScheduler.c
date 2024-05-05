@@ -21,40 +21,44 @@
 #include <uart.h>
 #include <timebase.h>
 #include <rtoskernel.h>
-#define ROUND_ROBIN_PERIOD		10 //MS
+#define ROUND_ROBIN_PERIOD		200 //MS
 
 uint32_t cntTask0, cntTask1, cntTask2;
-int sharedVariable;
 int32_t semaphore1, semaphore2;
 
-
 static void thread0(){
-	int temp0 = 0;
-	while(1){
-		rtosSemaphoreCntTake(&semaphore1);
-		temp0 = sharedVariable;
-		delay(15);//Somework
-		temp0++;
-		sharedVariable=temp0;
-		rtosSemaphoreCntGive(&semaphore2);
+  uint32_t oldTick = get_tick();
+  while(1){
+	if(get_tick()-oldTick >= 1){
+		cntTask0++;
+	  oldTick = get_tick();
 	}
+	delay(1);
+  }
 }
 
 static void thread1(){
-	while(1){
-		rtosSemaphoreCntTake(&semaphore2);
-		sharedVariable++;
-		printf("Shared Variable: %d\n\r", sharedVariable);
-		rtosSemaphoreCntGive(&semaphore1);
+  uint32_t oldTick = get_tick();
+  while(1){
+	if(get_tick()-oldTick >= 1){
+		cntTask1++;
+	  oldTick = get_tick();
 	}
+	if(cntTask1==70){
+		rtosThreadYield();
+	}
+  }
 }
 
-/*static void thread2(){
+static void thread2(){
+  uint32_t oldTick = get_tick();
   while(1){
-	printf("Shared Variable: %d\n\r", sharedVariable);
-	rtosThreadYield();
+	if(get_tick()-oldTick >= 1){
+		cntTask2++;
+	  oldTick = get_tick();
+	}
   }
-}*/
+}
 
 
 int main(void)
@@ -65,8 +69,7 @@ int main(void)
 	rtosKernelClkInit();
 	rtosKernelAddThread(&thread0, 0);
 	rtosKernelAddThread(&thread1, 1);
-	rtosSempahoreInit(&semaphore1, 1);
-	rtosSempahoreInit(&semaphore2, 0);
+	rtosKernelAddThread(&thread2, 2);
 	rtosKernelLaunch(ROUND_ROBIN_PERIOD);
 	while(1){}
 }

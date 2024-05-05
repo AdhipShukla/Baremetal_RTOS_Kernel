@@ -24,51 +24,62 @@
 #define ROUND_ROBIN_PERIOD		10 //MS
 
 uint32_t cntTask0, cntTask1, cntTask2;
-int sharedVariable;
 int32_t semaphore1, semaphore2;
 
-
-static void thread0(){
-	int temp0 = 0;
+void thread0(){
 	while(1){
+		cntTask0++;
 		rtosSemaphoreCntTake(&semaphore1);
-		temp0 = sharedVariable;
-		delay(15);//Somework
-		temp0++;
-		sharedVariable=temp0;
-		rtosSemaphoreCntGive(&semaphore2);
-	}
-}
-
-static void thread1(){
-	while(1){
-		rtosSemaphoreCntTake(&semaphore2);
-		sharedVariable++;
-		printf("Shared Variable: %d\n\r", sharedVariable);
+		printf("Thread0");
 		rtosSemaphoreCntGive(&semaphore1);
+		//rtosThreadYield();
+		delay(7);
 	}
 }
 
-/*static void thread2(){
-  while(1){
-	printf("Shared Variable: %d\n\r", sharedVariable);
-	rtosThreadYield();
-  }
-}*/
+void thread1(){
+	while(1){
+		cntTask1++;
+		//rtosThreadYield();
+	}
+}
 
+void thread2(){
+	while(1){
+		cntTask2++;
+		//rtosThreadYield();
+		rtosSemaphoreCntTake(&semaphore1);
+		park_mode();
+		rtosSemaphoreCntGive(&semaphore1);
+		//rtosThreadYield();
+		delay(3);
+	}
+}
 
 int main(void)
 {
 	led_init();
 	uart_tx_init();
 	tim2_1MS_tick_init();
+
+//	for(;;){
+//		led_on();
+//		//for(int i =0; i<90000; i++){};
+//		delay(4);
+//		led_off();
+//		printf("Hi from M4\n\r");
+//		delay(4);
+//	}
+	rtosSempahoreInit(&semaphore1, 1);
+	rtosSempahoreInit(&semaphore2, 0);
 	rtosKernelClkInit();
 	rtosKernelAddThread(&thread0, 0);
 	rtosKernelAddThread(&thread1, 1);
-	rtosSempahoreInit(&semaphore1, 1);
-	rtosSempahoreInit(&semaphore2, 0);
+	rtosKernelAddThread(&thread2, 2);
 	rtosKernelLaunch(ROUND_ROBIN_PERIOD);
-	while(1){}
+	while(1){
+
+	}
 }
 
 
